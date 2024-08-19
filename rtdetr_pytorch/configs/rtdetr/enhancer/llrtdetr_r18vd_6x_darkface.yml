@@ -1,0 +1,67 @@
+
+__include__: [
+  '../../dataset/darkface_detection.yml',
+  '../../runtime.yml',
+  '../include/dataloader.yml',
+  '../include/optimizer.yml',
+  '../include/llrtdetr_r50vd.yml',
+]
+
+output_dir: /netscratch/palyakere/work_dirs/RTDETR/R18/darkface/with_torch
+
+LLRTDETR: 
+  enhancer : TorchAdapt
+  backbone: PResNet
+  encoder: HybridEncoder
+  decoder: RTDETRTransformer
+  multi_scale: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+
+enhancer:
+  number_f: 32
+  adaptor_score: False
+  pretrained: True
+  
+PResNet:
+  depth: 18
+  freeze_at: -1
+  freeze_norm: False
+  pretrained: True
+
+HybridEncoder:
+  in_channels: [128, 256, 512]
+  hidden_dim: 256
+  expansion: 0.5
+
+
+RTDETRTransformer:
+  eval_idx: -1
+  num_decoder_layers: 3
+  num_denoising: 100
+
+epoches: 30
+
+optimizer:
+  type: AdamW
+  params: 
+    - 
+      params: '^(?=.*enhancer)(?=.*norm).*$'
+      lr: 0.00001
+      weight_decay: 0.
+    -
+      params: '^(?=.*enhancer)(?!.*norm).*$'
+      lr: 0.00001
+    -
+      params: '^(?=.*backbone)(?=.*norm).*$'
+      lr: 0.00001
+      weight_decay: 0.
+    - 
+      params: '^(?=.*backbone)(?!.*norm).*$'
+      lr: 0.00001
+    - 
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bias)).*$'
+      weight_decay: 0.
+
+  lr: 0.0001 # since batch size is 32(8*4), lr is lr*4
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001
+
